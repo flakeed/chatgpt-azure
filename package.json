@@ -8,7 +8,7 @@
     "@deep-foundation/tokens": "^0.0.11",
     "@freephoenix888/dependency": "^0.0.1"
   },
-  "version": "0.0.3",
+  "version": "0.0.4",
   "keywords": [
     "deep-package"
   ]
