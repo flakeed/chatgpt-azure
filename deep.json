@@ -1,0 +1,256 @@
+{
+  "package": {
+    "name": "@deep-foundation/chatgpt-azure",
+    "version": "0.0.2"
+  },
+  "data": [
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "Type"
+      },
+      "id": 1
+    },
+    {
+      "package": {
+        "dependencyId": 1,
+        "containValue": "Model"
+      },
+      "id": 2
+    },
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "Value"
+      },
+      "id": 3
+    },
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "String"
+      },
+      "id": 4
+    },
+    {
+      "package": {
+        "dependencyId": 2,
+        "containValue": "Tokens"
+      },
+      "id": 5
+    },
+    {
+      "package": {
+        "dependencyId": 1,
+        "containValue": "UsesModel"
+      },
+      "id": 6
+    },
+    {
+      "package": {
+        "dependencyId": 3,
+        "containValue": "Dependency"
+      },
+      "id": 7
+    },
+    {
+      "package": {
+        "dependencyId": 4,
+        "containValue": "TokensDependency"
+      },
+      "id": 8
+    },
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "SyncTextFile"
+      },
+      "id": 9
+    },
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "Handler"
+      },
+      "id": 10
+    },
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "dockerSupportsJs"
+      },
+      "id": 11
+    },
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "HandleInsert"
+      },
+      "id": 12
+    },
+    {
+      "package": {
+        "dependencyId": 5,
+        "containValue": "Reply"
+      },
+      "id": 13
+    },
+    {
+      "package": {
+        "dependencyId": 5,
+        "containValue": "Message"
+      },
+      "id": 14
+    },
+    {
+      "package": {
+        "dependencyId": 0,
+        "containValue": "Any"
+      },
+      "id": 15
+    },
+    {
+      "id": "Conversation",
+      "type": 1
+    },
+    {
+      "id": "Endpoint",
+      "type": 1
+    },
+    {
+      "id": "ProvidedBy",
+      "type": 1,
+      "from": 2,
+      "to": "Endpoint"
+    },
+    {
+      "id": "gpt-4-endpoint",
+      "type": "Endpoint",
+      "value": {
+        "value": "https://deep-ai.openai.azure.com/openai/deployments/gpt-4-32k/chat/completions?api-version=2023-03-15-preview"
+      }
+    },
+    {
+      "id": "EndpointValue",
+      "type": 3,
+      "from": "Endpoint",
+      "to": 4
+    },
+    {
+      "id": "gpt-4",
+      "type": 2,
+      "value": {
+        "value": "gpt-4"
+      }
+    },
+    {
+      "id": "gpt-4-providedBy",
+      "type": "ProvidedBy",
+      "from": "gpt-4",
+      "to": "gpt-4-endpoint"
+    },
+    {
+      "id": "gpt-4-max-tokens",
+      "type": 5,
+      "from": "gpt-4",
+      "to": "gpt-4",
+      "value": {
+        "value": 8192
+      }
+    },
+    {
+      "id": "gpt-4-uses-model",
+      "type": 6,
+      "to": "gpt-4"
+    },
+    {
+      "id": "Dependency",
+      "type": 7,
+      "from": 8,
+      "to": 8
+    },
+    {
+      "id": "ReplyInsertHandlerCode",
+      "type": 9,
+      "value": {
+        "value": "async ({ data: { newLink: replyLink, triggeredByLinkId }, deep, require }) => {\n  const startTime = Date.now();\n  const PACKAGE_NAME = `@deep-foundation/chatgpt-azure`;\n  const axios = require('axios');\n\n  const { Configuration, OpenAIApi } = require('openai');\n  const chatGPTTypeLinkId = await deep.id(PACKAGE_NAME, 'ChatGPT');\n  const conversationTypeLinkId = await deep.id(PACKAGE_NAME, 'Conversation');\n  const apiKeyTypeLinkId = await deep.id('@deep-foundation/openai', 'ApiKey');\n  const usesApiKeyTypeLinkId = await deep.id('@deep-foundation/openai', 'UsesApiKey');\n  const modelTypeLinkId = await deep.id('@deep-foundation/openai', 'Model');\n  const usesModelTypeLinkId = await deep.id('@deep-foundation/openai', 'UsesModel');\n  const messageTypeLinkId = await deep.id('@deep-foundation/messaging', 'Message');\n  const replyTypeLinkId = await deep.id('@deep-foundation/messaging', 'Reply');\n  const authorTypeLinkId = await deep.id('@deep-foundation/messaging', 'Author');\n  const containTypeLinkId = await deep.id('@deep-foundation/core', 'Contain');\n  const messagingTreeId = await deep.id('@deep-foundation/messaging', 'MessagingTree');\n  const systemTypeLinkId = await deep.id('@deep-foundation/chatgpt-azure', 'System');\n  const tokensTypeLinkId = await deep.id(\"@deep-foundation/tokens\", \"Tokens\")\n  const reservedIds = await deep.reserve(1);\n  const chatGPTMessageLinkId = reservedIds.pop();\n  let systemMessageId;\n  let model;\n  let systemMessage;\n\n  const { data: [messageLink] } = await deep.select({\n    id: replyLink.from_id,\n    _not: {\n      out: {\n        to_id: chatGPTTypeLinkId,\n        type_id: authorTypeLinkId,\n      },\n    },\n  });\n  if (!messageLink) {\n    return 'No need to react to message of this reply.';\n  }\n  if (!messageLink.value?.value) {\n    throw new Error(`Message ##${messageLink.id} must have a value`);\n  }\n  const message = messageLink.value.value;\n\n  const apiKeyLink = await getTokenLink();\n  const apiKey = apiKeyLink.value.value;\n  const configuration = new Configuration({\n    apiKey: apiKey,\n  });\n  const openai = new OpenAIApi(configuration);\n\n  const { data: conversationLink } = await deep.select({\n    tree_id: { _eq: messagingTreeId },\n    parent: { type_id: { _in: [conversationTypeLinkId, messageTypeLinkId] } },\n    link: { id: { _eq: replyLink.from_id } },\n  }, {\n    table: 'tree',\n    variables: { order_by: { depth: \"asc\" } },\n    returning: `\n    id\n    depth\n    root_id\n    parent_id\n    link_id\n    parent {\n      id\n      from_id\n      type_id\n      to_id\n      value\n      author: out (where: { type_id: { _eq: ${authorTypeLinkId}} }) { \n        id\n        from_id\n        type_id\n        to_id\n      }\n      tokens: out (where: { type_id: { _eq: ${tokensTypeLinkId}} }) { \n      id\n      from_id\n      type_id\n      to_id\n      value\n      }\n    }`\n  })\n  if (!conversationLink) {\n    throw new Error('A conversationLink link is not found');\n  }\n  const currentConversation = conversationLink.find(\n    (link) => link.parent.type_id === conversationTypeLinkId\n  );\n\n  conversationLink.forEach((link) => {\n    if (link.parent.author && link.parent.author.length > 0) {\n      link.parent.author = link.parent.author[0];\n    }\n  });\n\n  const {\n    data: [linkedModel],\n  } = await deep.select({\n    type_id: modelTypeLinkId,\n    in: {\n      type_id: usesModelTypeLinkId,\n      from_id: currentConversation.parent.id,\n    },\n  });\n\n  const {\n    data: [userLinkedModel],\n  } = await deep.select({\n    type_id: 1165,\n    in: {\n      type_id: 1166,\n      from_id: 380,\n    },  \n  }, {\n    returning: `\n      id\n      value\n      in(where: { type_id: { _eq: ${1166} } }) {\n        id\n        type_id\n        from_id\n        to_id\n        value\n      }\n      tokens: out(where: { type_id: { _eq: ${1101} } }) {\n        id\n        from_id\n        to_id\n        value\n      }\n      endpointLink: out(where: { type_id: { _eq: ${1325} } }) {\n        id\n        from_id\n        to_id\n        endpoint: to {\n          id\n          value\n        }\n      }\n    `\n  });\n\n  if (!userLinkedModel[0]?.tokens?.[0]?.value?.value) {\n    throw new Error(\"Token limit for the model is not specified.\");\n  }\n  const MAX_TOKENS = userLinkedModel[0].tokens[0].value.value;\n\n  if (!userLinkedModel[0]?.endpointLink?.[0]?.endpoint?.value) {\n    throw new Error(\"Endpoint for the model is not specified.\");\n  }\n  const API_ENDPOINT = userLinkedModel[0].endpointLink[0].endpoint.value;\n\n  if (!linkedModel && !userLinkedModel) {\n    model = 'gpt-35-turbo';\n  } else if (\n    (linkedModel &&\n      linkedModel.value?.value &&\n      userLinkedModel &&\n      userLinkedModel.value?.value) ||\n    (linkedModel && linkedModel.value?.value)\n  ) {\n    model = linkedModel.value.value;\n  } else {\n    if (!userLinkedModel) {\n      throw new Error(`A link with type ##${userLinkedModel} is not found`);\n    }\n    if (!userLinkedModel.value?.value) {\n      throw new Error(`Linked model with user ##${userLinkedModel.id} must have a value`);\n    } else {\n      model = userLinkedModel.value.value;\n    }\n  }\n  const messageLinks = conversationLink\n    .map(item => item.parent)\n    .filter(link => link && link.type_id === messageTypeLinkId);\n  let allMessages = await getMessages({ messageLinks });\n  const messagesToSend = [...allMessages];\n\n  const { data: userLinkedSystemMessageLinks } = await deep.select({\n    type_id: systemTypeLinkId,\n    to_id: triggeredByLinkId,\n  }, { returning: `id message: from{ id value} conversation:to{id}` });\n  \n  const { data: conversationLinkedSystemMessageLink } = await deep.select({\n    type_id: systemTypeLinkId,\n    to_id: currentConversation.parent.id,\n  }, { returning: `id message: from{ id value} conversation:to{id}` });\n\n  if (conversationLinkedSystemMessageLink && conversationLinkedSystemMessageLink.length > 0) {\n    const systemMessageLink = conversationLinkedSystemMessageLink[0];\n    if (!systemMessageLink.message?.value?.value) {\n      throw new Error(`System message with link to conversation ##${systemMessageLink.id} must have a value`);\n    } else {\n      systemMessage = systemMessageLink.message.value.value;\n      systemMessageId = systemMessageLink.message;\n    }\n  } else if (userLinkedSystemMessageLinks && userLinkedSystemMessageLinks.length > 0) {\n    if (userLinkedSystemMessageLinks.length > 1) {\n      throw new Error(\"Multiple system messages linked to the user are found\");\n    }\n\n    const userLinkedSystemMessageLink = userLinkedSystemMessageLinks[0];\n\n    if (!userLinkedSystemMessageLink.message?.value?.value) {\n      throw new Error(`System message with link to user ##${userLinkedSystemMessageLink.id} must have a value`);\n    } else {\n      systemMessage = userLinkedSystemMessageLink.message.value.value;\n      systemMessageId = userLinkedSystemMessageLink.message;\n    }\n  }\n\n  if (systemMessage) {\n    const { data: tokensLinkedToSystemMessage } = await deep.select({\n      type_id: tokensTypeLinkId,\n      from_id: systemMessageId.id,\n      to_id: systemMessageId.id,\n    });\n    let tokenCount = tokensLinkedToSystemMessage[0].value?.value;\n    messagesToSend.unshift({\n      role: \"system\",\n      content: systemMessage,\n      tokens: tokenCount,\n    });\n\n  }\n\n  const tokenLimit = MAX_TOKENS * 7 / 8;\n  let totalTokens = 0;\n  let messagesToSendToOpenAI = [];\n\n  for (let i = messagesToSend.length - 1; i >= 0; i--) {\n    const message = messagesToSend[i];\n\n    if (message.role === 'system' || totalTokens + message.tokens <= tokenLimit) {\n      messagesToSendToOpenAI.unshift({ role: message.role, content: message.content });\n      totalTokens += message.tokens;\n    } else {\n      break;\n    }\n  }\nlet response;\n\n  try {\n    response = await axios.post(API_ENDPOINT, {\n      messages: [\n        ...messagesToSendToOpenAI\n      ],\n    }, {\n      headers: {\n        'Content-Type': 'application/json',\n        'api-key': apiKey\n      }\n    });\n  } catch (error) {\n    console.error('Error making API call:', error);\n  }\n\nconst content = response.data.choices[0]?.message?.content;\n\n  deep.serial({\n    operations: [\n      {\n        table: 'links',\n        type: 'insert',\n        objects: {\n          id: chatGPTMessageLinkId,\n          type_id: messageTypeLinkId,\n          in: {\n            data: [\n              {\n                type_id: containTypeLinkId,\n                from_id: triggeredByLinkId,\n              },\n            ],\n          },\n          out: {\n            data: [\n              {\n                type_id: authorTypeLinkId,\n                to_id: chatGPTTypeLinkId,\n              },\n            ],\n          },\n        },\n      },\n      {\n        table: 'strings',\n        type: 'insert',\n        objects: {\n          link_id: chatGPTMessageLinkId,\n          value: content\n        }\n      },\n      {\n        table: 'links',\n        type: 'insert',\n        objects: {\n          type_id: replyTypeLinkId,\n          from_id: chatGPTMessageLinkId,\n          to_id: replyLink.from_id,\n          in: {\n            data: {\n              type_id: containTypeLinkId,\n              from_id: triggeredByLinkId,\n            },\n          },\n        },\n      },\n    ],\n  });\n\n  async function getMessages({ messageLinks }) {\n    return Promise.all(\n      messageLinks.map(async (link) => {\n        const tokens = link.tokens?.length > 0 ? link.tokens[0].value.value : undefined;\n        return {\n          role: await getMessageRole({ messageLink: link }),\n          content: link.value.value,\n          tokens: tokens,\n        }\n      })\n    );\n  }\n\n  async function getMessageRole({ messageLink }) {\n    const authorLink = messageLink.author;\n    if (!authorLink) {\n      throw new Error(`Author link not found for message ##${messageLink.id}`);\n    }\n    return authorLink.to_id === chatGPTTypeLinkId ? 'assistant' : 'user';\n  }\n\n  async function getTokenLink() {\n    let resultTokenLink;\n    const { data } = await deep.select({\n      _or: [\n        {\n          type_id: apiKeyTypeLinkId,\n          in: {\n            type_id: containTypeLinkId,\n            from_id: triggeredByLinkId,\n          },\n        },\n        {\n          from_id: triggeredByLinkId,\n          type_id: usesApiKeyTypeLinkId,\n        },\n      ],\n    });\n    if (data.length === 0) {\n      throw new Error(`ApiKey ##${apiKeyTypeLinkId} is not found`);\n    }\n    const usesLinks = data.filter(\n      (link) => link.type_id === usesApiKeyTypeLinkId\n    );\n    if (usesLinks.length > 1) {\n      throw new Error(\n        `More than 1 links of type ##${usesApiKeyTypeLinkId} are found`\n      );\n    }\n    const usesLink = data.find(\n      (link) => link.type_id === usesApiKeyTypeLinkId\n    );\n    if (usesLink) {\n      const tokenLink = data.find((link) => link.id === usesLink.to_id);\n      if (!tokenLink) {\n        throw new Error(`ApiKey ##${apiKeyTypeLinkId} is not found`);\n      } else {\n        resultTokenLink = tokenLink;\n      }\n    } else {\n      const tokenLink = data.filter(\n        (link) => link.type_id === apiKeyTypeLinkId\n      );\n      if (tokenLink.length > 1) {\n        throw new Error(\n          `For 2 or more ApiKey ##${apiKeyTypeLinkId} links you must activate it with usesOpenAiApiKey link`\n        );\n      } else {\n        const tokenLink = data.find(\n          (link) => link.type_id === apiKeyTypeLinkId\n        );\n        if (!tokenLink) {\n          throw new Error(`ApiKey ##${apiKeyTypeLinkId} is not found`);\n        }\n        resultTokenLink = tokenLink;\n      }\n    }\n    if (!resultTokenLink.value?.value) {\n      throw new Error(`ApiKey ##${apiKeyTypeLinkId} has no value`);\n    }\n    return resultTokenLink;\n  }\n\n  const endTime = Date.now();\n  const duration = (endTime - startTime) / 1000;\n  return {\n    request: {\n      model: model,\n      messages: [\n        ...messagesToSendToOpenAI\n      ],\n    },\n    response: response.data,\n    duration: duration,\n    totalTokens: totalTokens\n  };\n};"
+      }
+    },
+    {
+      "id": "ReplyInsertHandler",
+      "type": 10,
+      "from": 11,
+      "to": "ReplyInsertHandlerCode"
+    },
+    {
+      "id": "HandleReplyInsert",
+      "type": 12,
+      "from": 13,
+      "to": "ReplyInsertHandler"
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "type": 2,
+      "value": {
+        "value": "gpt-3.5-turbo"
+      }
+    },
+    {
+      "id": "gpt-4-0613",
+      "type": 2,
+      "value": {
+        "value": "gpt-4-0613"
+      }
+    },
+    {
+      "id": "gpt-4-0314",
+      "type": 2,
+      "value": {
+        "value": "gpt-4-0314"
+      }
+    },
+    {
+      "id": "System",
+      "type": 1,
+      "from": 14,
+      "to": 15
+    },
+    {
+      "id": "ChatGPT",
+      "type": 1
+    },
+    {
+      "id": "ConversationValue",
+      "type": 3,
+      "from": "Conversation",
+      "to": 4
+    }
+  ],
+  "errors": [],
+  "dependencies": [
+    {
+      "name": "@deep-foundation/core",
+      "version": "0.0.2"
+    },
+    {
+      "name": "@deep-foundation/openai",
+      "version": "1.0.2"
+    },
+    {
+      "name": "@deep-foundation/tokens",
+      "version": "0.0.11"
+    },
+    {
+      "name": "@freephoenix888/dependency",
+      "version": "0.0.1"
+    },
+    {
+      "name": "@deep-foundation/chatgpt-tokens-gpt-3-encoder",
+      "version": "0.0.19"
+    },
+    {
+      "name": "@deep-foundation/messaging",
+      "version": "1.0.1"
+    }
+  ]
+}
