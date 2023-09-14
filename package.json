@@ -1,14 +1,14 @@
 {
   "name": "@deep-foundation/chatgpt-azure",
   "dependencies": {
-    "@deep-foundation/chatgpt-tokens-gpt-4-encoder": "^0.0.2",
+    "@deep-foundation/chatgpt-tokens-gpt-4-encoder": "~1.0.1",
     "@deep-foundation/core": "^0.0.2",
     "@deep-foundation/messaging": "~2.0.0",
     "@deep-foundation/openai": "~1.0.2",
     "@deep-foundation/tokens": "^0.0.11",
     "@freephoenix888/dependency": "^0.0.1"
   },
-  "version": "0.0.8",
+  "version": "1.0.2",
   "keywords": [
     "deep-package"
   ]
