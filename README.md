@@ -44,7 +44,7 @@ await deep.insert([
 - Create an `ApiKey` link.
 - Open its editor, insert your API key, and save the changes (Ctrl+S).
 
-### 6. Selecting the Model (if needed)
+### 6. Selecting the Model
 - To view the available prepared models, right-click on the `@deep-foundation/chatgpt-azure-deep` package link -> space to enter the package space. Here, you can browse through and select the desired model.
 - If you want to use another `Model`, note down the ID of your chosen `Model` from the prepared ones. Then, execute the following query, replacing `MODEL` with the ID:
 ```javascript
